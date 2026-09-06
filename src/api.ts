@@ -69,6 +69,12 @@ export const api = {
   createAartiDay: (body: { slot_date: string; morning_time?: string; evening_time?: string }) =>
     request<AartiSlot[]>("/api/v1/aarti/days", { method: "POST", body: JSON.stringify(body) }),
   mahaprasad: () => request<Mahaprasad[]>("/api/v1/mahaprasad"),
+  createMahaprasad: (body: Record<string, unknown>) =>
+    request<Mahaprasad>("/api/v1/mahaprasad", { method: "POST", body: JSON.stringify(body) }),
+  updateMahaprasad: (id: number, body: Record<string, unknown>) =>
+    request<Mahaprasad>(`/api/v1/mahaprasad/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  volunteerMahaprasad: (id: number) =>
+    request<Mahaprasad>(`/api/v1/mahaprasad/${id}/volunteer`, { method: "POST" }),
   inventory: () => request<InventoryItem[]>("/api/v1/inventory"),
   finalReport: () => request<FinalReport>("/api/v1/reports/final"),
 };
@@ -153,8 +159,13 @@ export type Mahaprasad = {
   prasad_date: string;
   menu: string;
   expected_people: number;
+  food_quantity?: string | null;
   cooking_team?: string | null;
+  serving_team?: string | null;
+  volunteers?: string | null;
+  vendor?: string | null;
   food_budget: number;
+  actual_cost?: number | null;
   distribution_time?: string | null;
 };
 
