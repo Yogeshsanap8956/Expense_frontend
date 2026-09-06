@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.svg"],
+      includeAssets: ["favicon.svg", "favicon-32.png", "apple-touch-icon.png"],
       manifest: {
         name: "Shree Ganesh Mitra Mandal",
         short_name: "Ganpati Mandal",
@@ -15,8 +15,18 @@ export default defineConfig({
         theme_color: "#7a1f1f",
         background_color: "#fff8ef",
         display: "standalone",
+        orientation: "portrait",
         start_url: "/",
-        icons: [{ src: "favicon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" }],
+        scope: "/",
+        icons: [
+          { src: "pwa-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: "pwa-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+          { src: "pwa-512-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+        ],
+      },
+      workbox: {
+        navigateFallback: "/index.html",
+        globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
       },
     }),
   ],
