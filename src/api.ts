@@ -1,0 +1,167 @@
+const TOKEN_KEY = "mandal_token";
+
+export function getToken() {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setToken(token: string) {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function clearToken() {
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const token = getToken();
+  const headers = new Headers(options.headers);
+  headers.set("Content-Type", "application/json");
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const res = await fetch(path, { ...options, headers });
+  if (res.status === 401) {
+    clearToken();
+    throw new Error("Please login again");
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || "Request failed");
+  }
+  if (res.headers.get("content-type")?.includes("application/pdf")) {
+    return (await res.blob()) as T;
+  }
+  return res.json();
+}
+
+export const api = {
+  login: (phone: string, password: string) =>
+    request<{ access_token: string }>("/api/v1/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ phone, password }),
+    }),
+  me: () => request<User>("/api/v1/auth/me"),
+  dashboard: () => request<Dashboard>("/api/v1/dashboard"),
+  vargani: () => request<Vargani[]>("/api/v1/vargani"),
+  updateVargani: (id: number, body: Partial<Vargani>) =>
+    request<Vargani>(`/api/v1/vargani/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  reminder: (id: number) => request<{ whatsapp_url: string }>(`/api/v1/vargani/${id}/reminder`),
+  expenses: () => request<Expense[]>("/api/v1/expenses"),
+  createExpense: (body: Partial<Expense>) =>
+    request<Expense>("/api/v1/expenses", { method: "POST", body: JSON.stringify(body) }),
+  expenseReport: () => request<{ breakdown: { category: string; total: number }[]; total: number }>("/api/v1/expenses/report"),
+  members: () => request<User[]>("/api/v1/members"),
+  createMember: (body: Record<string, unknown>) =>
+    request<User>("/api/v1/members", { method: "POST", body: JSON.stringify(body) }),
+  announcements: () => request<Announcement[]>("/api/v1/announcements"),
+  createAnnouncement: (body: { title: string; body: string }) =>
+    request<Announcement>("/api/v1/announcements", { method: "POST", body: JSON.stringify(body) }),
+  events: () => request<FestivalEvent[]>("/api/v1/events"),
+  aarti: () => request<AartiSlot[]>("/api/v1/aarti"),
+  mahaprasad: () => request<Mahaprasad[]>("/api/v1/mahaprasad"),
+  inventory: () => request<InventoryItem[]>("/api/v1/inventory"),
+  finalReport: () => request<FinalReport>("/api/v1/reports/final"),
+};
+
+export type User = {
+  id: number;
+  name: string;
+  phone: string;
+  house_number?: string | null;
+  role: string;
+  is_active: boolean;
+};
+
+export type Dashboard = {
+  mandal_name: string;
+  vargani_collected: number;
+  vargani_pending: number;
+  vargani_expected: number;
+  expenses_spent: number;
+  balance: number;
+  today_morning_aarti?: string | null;
+  today_evening_aarti?: string | null;
+  today_mahaprasad?: string | null;
+  today_aarti_members: number;
+  upcoming_events: FestivalEvent[];
+  announcements: Announcement[];
+};
+
+export type Vargani = {
+  id: number;
+  member_id: number;
+  member_name: string;
+  house_number?: string | null;
+  phone: string;
+  expected_amount: number;
+  amount_paid: number;
+  pending_amount: number;
+  status: string;
+  payment_method?: string | null;
+  payment_date?: string | null;
+  receipt_number?: string | null;
+};
+
+export type Expense = {
+  id: number;
+  category: string;
+  description: string;
+  amount: number;
+  paid_to: string;
+  expense_date: string;
+  payment_method: string;
+};
+
+export type Announcement = {
+  id: number;
+  title: string;
+  body: string;
+  is_important: boolean;
+  created_at: string;
+};
+
+export type FestivalEvent = {
+  id: number;
+  title: string;
+  event_date: string;
+  location?: string | null;
+  status: string;
+};
+
+export type AartiSlot = {
+  id: number;
+  slot_date: string;
+  session: string;
+  start_time: string;
+  members: { id: number; name: string }[];
+};
+
+export type Mahaprasad = {
+  id: number;
+  prasad_date: string;
+  menu: string;
+  expected_people: number;
+  cooking_team?: string | null;
+  food_budget: number;
+  distribution_time?: string | null;
+};
+
+export type InventoryItem = {
+  id: number;
+  name: string;
+  total_quantity: number;
+  used_quantity: number;
+  returned_quantity: number;
+  available_quantity: number;
+  status: string;
+};
+
+export type FinalReport = {
+  festival: string;
+  mandal_name: string;
+  vargani: { expected: number; collected: number; pending: number };
+  expenses: { category: string; total: number }[];
+  total_expenses: number;
+  balance: number;
+};
+
+export const inr = (n: number) =>
+  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
