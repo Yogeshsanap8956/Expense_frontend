@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState } from "react";
-import { Megaphone, Plus, Send } from "lucide-react";
+import { Megaphone, MessageCircle, Plus, Send } from "lucide-react";
 import { api, type Announcement } from "../api";
 import { useAuth } from "../AuthContext";
 import { EmptyState, FormField, PageHeader, SkeletonCards } from "../components/ui";
@@ -9,6 +9,7 @@ export default function AnnouncementsPage() {
   const [rows, setRows] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [error, setError] = useState("");
   const canPost = user?.role === "admin";
 
   function refresh() {
@@ -21,28 +22,50 @@ export default function AnnouncementsPage() {
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    await api.createAnnouncement({ title: String(form.get("title")), body: String(form.get("body")) });
+    const created = await api.createAnnouncement({ title: String(form.get("title")), body: String(form.get("body")) });
     e.currentTarget.reset();
     setShowForm(false);
     await refresh();
+    if (form.get("share") === "on") {
+      const data = await api.shareAnnouncement(created.id);
+      window.open(data.whatsapp_url, "_blank");
+    }
+  }
+
+  async function share(row: Announcement) {
+    try {
+      const data = await api.shareAnnouncement(row.id);
+      window.open(data.whatsapp_url, "_blank");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not open WhatsApp");
+    }
   }
 
   return (
     <div className="page-stack">
       <PageHeader eyebrow="Stay informed" title="Announcements" description="Important updates for every mandal member."
         action={canPost && <button className="icon-button" onClick={() => setShowForm((value) => !value)}><Plus size={20} /></button>} />
+      {error && <p className="error">{error}</p>}
       {canPost && showForm && (
         <form className="form-card page-enter" onSubmit={onSubmit}>
           <h3>Post announcement</h3>
           <FormField label="Title"><input name="title" placeholder="Important notice" required /></FormField>
           <FormField label="Message"><textarea name="body" placeholder="Write a clear update for all members…" required /></FormField>
+          <label className="check"><input type="checkbox" name="share" /> Share on WhatsApp after publishing</label>
           <div className="form-actions"><button type="button" className="button-secondary" onClick={() => setShowForm(false)}>Cancel</button><button type="submit"><Send size={17} /> Publish</button></div>
         </form>
       )}
       {loading ? <SkeletonCards /> : rows.length ? rows.map((row) => (
         <article className="announcement-card" key={row.id}>
-          <Megaphone size={22} /><h3>{row.title}</h3><p>{row.body}</p>
-          <time>{new Date(row.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</time>
+          <Megaphone size={22} />
+          <h3>{row.title}</h3>
+          <p>{row.body}</p>
+          <div className="announcement-foot">
+            <time>{new Date(row.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</time>
+            <button className="icon-button whatsapp-button" type="button" onClick={() => share(row)} title="Share on WhatsApp" aria-label={`Share ${row.title} on WhatsApp`}>
+              <MessageCircle size={18} />
+            </button>
+          </div>
         </article>
       )) : <EmptyState icon={Megaphone} title="No announcements yet" description="New mandal notices and important updates will appear here."
         action={canPost && <button onClick={() => setShowForm(true)}>Create announcement</button>} />}

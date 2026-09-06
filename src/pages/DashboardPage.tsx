@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import {
   CalendarDays, HandCoins, Megaphone, Plus, ReceiptText, Sparkles,
-  TrendingUp, Utensils, WalletCards,
+  TrendingUp, UserRound, Utensils, WalletCards,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api, inr, type Dashboard } from "../api";
+import { useAuth } from "../AuthContext";
 import { AnimatedNumber, SectionHeader, SkeletonCards, StatCard } from "../components/ui";
 
 export default function DashboardPage() {
+  const { user } = useAuth();
   const [data, setData] = useState<Dashboard | null>(null);
   const [error, setError] = useState("");
 
@@ -24,7 +26,15 @@ export default function DashboardPage() {
     { title: "Mahaprasad", value: data.today_mahaprasad || "Not scheduled", detail: "View menu and serving team", icon: Utensils, live: Boolean(data.today_mahaprasad) },
     { title: "Announcement", value: data.announcements[0]?.title || "No new notice", detail: data.announcements[0]?.body || "You're all caught up", icon: Megaphone, live: Boolean(data.announcements[0]) },
   ];
-  const quickActions = [
+  const isMember = user?.role === "member";
+  const quickActions = isMember ? [
+    { to: "/me", label: "My Seva", icon: UserRound },
+    { to: "/aarti", label: "Aarti", icon: Sparkles },
+    { to: "/calendar", label: "Events", icon: CalendarDays },
+    { to: "/announcements", label: "Notice", icon: Megaphone },
+    { to: "/prasad", label: "Mahaprasad", icon: Utensils },
+    { to: "/vargani", label: "Vargani", icon: HandCoins },
+  ] : [
     { to: "/vargani", label: "Add Vargani", icon: HandCoins },
     { to: "/expenses", label: "Add Expense", icon: Plus },
     { to: "/aarti", label: "Aarti", icon: Sparkles },
@@ -77,7 +87,11 @@ export default function DashboardPage() {
       <SectionHeader title="Upcoming events" subtitle="Festival calendar" action={<Link to="/calendar" className="eyebrow">View all</Link>} />
       <div className="timeline">
         {data.upcoming_events.slice(0, 4).map((event) => (
-          <article className="timeline-card" key={event.id}><time>{event.event_date}</time><h3>{event.title}</h3><p>{event.location || "Mandal premises"}</p></article>
+          <article className="timeline-card" key={event.id}>
+            <time>{event.event_date}{event.event_time ? ` · ${event.event_time}` : ""}</time>
+            <h3>{event.title}</h3>
+            <p>{event.location || "Mandal premises"}</p>
+          </article>
         ))}
       </div>
     </div>

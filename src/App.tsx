@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import {
   CalendarDays, ChevronRight, HandCoins, Home, LogOut, Megaphone, Menu,
-  Package, ReceiptText, Sparkles, Users, Utensils,
+  Package, ReceiptText, Sparkles, UserRound, Users, Utensils,
 } from "lucide-react";
 import { Navigate, NavLink, Route, Routes } from "react-router-dom";
 import { useAuth } from "./AuthContext";
@@ -14,6 +14,7 @@ import ExpensesPage from "./pages/ExpensesPage";
 import InventoryPage from "./pages/InventoryPage";
 import LoginPage from "./pages/LoginPage";
 import MembersPage from "./pages/MembersPage";
+import MySevaPage from "./pages/MySevaPage";
 import PrasadPage from "./pages/PrasadPage";
 import ReportPage from "./pages/ReportPage";
 import VarganiPage from "./pages/VarganiPage";
@@ -47,6 +48,7 @@ function Shell({ children }: { children: ReactNode }) {
 function MorePage() {
   const { user, logout } = useAuth();
   const links = [
+    { to: "/me", label: "My seva", caption: "Your vargani and aarti availability", icon: UserRound },
     { to: "/aarti", label: "Aarti schedule", caption: "Availability and assignments", icon: Sparkles },
     { to: "/prasad", label: "Mahaprasad", caption: "Menu, teams and budget", icon: Utensils },
     { to: "/members", label: "Members & roles", caption: "Committee directory", icon: Users },
@@ -84,6 +86,7 @@ export default function App() {
     <Shell>
       <Routes>
         <Route path="/" element={<DashboardPage />} />
+        <Route path="/me" element={<MySevaPage />} />
         <Route path="/vargani" element={<VarganiPage />} />
         <Route path="/expenses" element={<ExpensesPage />} />
         <Route path="/aarti" element={<AartiPage />} />
