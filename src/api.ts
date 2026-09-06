@@ -17,14 +17,24 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
   headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  const res = await fetch(path, { ...options, headers });
-  if (res.status === 401) {
-    clearToken();
-    throw new Error("Please login again");
+  let res: Response;
+  try {
+    res = await fetch(path, { ...options, headers });
+  } catch {
+    throw new Error("Cannot reach the server. Make sure backend is running on port 8000.");
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail || "Request failed");
+    const detail = typeof body.detail === "string" ? body.detail : Array.isArray(body.detail) ? body.detail[0]?.msg : "";
+    if (res.status === 401) {
+      // Don't clear token during login attempts themselves.
+      if (!path.includes("/auth/login")) clearToken();
+      throw new Error(detail || "Incorrect phone or password");
+    }
+    if (res.status === 404) {
+      throw new Error(detail || "API not found. Restart the frontend so the /api proxy can reach the backend.");
+    }
+    throw new Error(detail || "Request failed");
   }
   if (res.headers.get("content-type")?.includes("application/pdf")) {
     return (await res.blob()) as T;
@@ -47,7 +57,24 @@ export const api = {
   expenses: () => request<Expense[]>("/api/v1/expenses"),
   createExpense: (body: Partial<Expense>) =>
     request<Expense>("/api/v1/expenses", { method: "POST", body: JSON.stringify(body) }),
+  updateExpense: (id: number, body: Partial<Expense>) =>
+    request<Expense>(`/api/v1/expenses/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   expenseReport: () => request<{ breakdown: { category: string; total: number }[]; total: number }>("/api/v1/expenses/report"),
+  uploadFile: async (file: File) => {
+    const token = getToken();
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch("/api/v1/uploads/", {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(typeof body.detail === "string" ? body.detail : "Upload failed");
+    }
+    return res.json() as Promise<{ url: string }>;
+  },
   members: () => request<User[]>("/api/v1/members"),
   createMember: (body: Record<string, unknown>) =>
     request<User>("/api/v1/members", { method: "POST", body: JSON.stringify(body) }),
@@ -126,6 +153,9 @@ export type Expense = {
   paid_to: string;
   expense_date: string;
   payment_method: string;
+  bill_url?: string | null;
+  payment_screenshot_url?: string | null;
+  notes?: string | null;
 };
 
 export type Announcement = {

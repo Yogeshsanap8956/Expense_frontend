@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState } from "react";
-import { IndianRupee, Plus, ReceiptText, Store, WalletCards } from "lucide-react";
+import { Camera, FileImage, IndianRupee, Plus, ReceiptText, Store, WalletCards } from "lucide-react";
 import { api, inr, type Expense } from "../api";
 import { useAuth } from "../AuthContext";
 import { EmptyState, FormField, PageHeader, SectionHeader, SkeletonCards } from "../components/ui";
@@ -19,13 +19,21 @@ const categories = [
   "other",
 ];
 
+async function uploadIfPresent(file: File | null) {
+  if (!file || file.size === 0) return undefined;
+  const result = await api.uploadFile(file);
+  return result.url;
+}
+
 export default function ExpensesPage() {
   const { user } = useAuth();
   const [rows, setRows] = useState<Expense[]>([]);
   const [report, setReport] = useState<{ category: string; total: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [preview, setPreview] = useState<string | null>(null);
   const canEdit = user?.role === "admin" || user?.role === "treasurer";
 
   function refresh() {
@@ -42,7 +50,11 @@ export default function ExpensesPage() {
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
+    setSaving(true);
+    setError("");
     try {
+      const bill_url = await uploadIfPresent(form.get("bill") as File | null);
+      const payment_screenshot_url = await uploadIfPresent(form.get("screenshot") as File | null);
       await api.createExpense({
         category: String(form.get("category")),
         description: String(form.get("description")),
@@ -50,11 +62,17 @@ export default function ExpensesPage() {
         paid_to: String(form.get("paid_to")),
         expense_date: String(form.get("date")),
         payment_method: String(form.get("method")),
+        bill_url,
+        payment_screenshot_url,
       });
       e.currentTarget.reset();
       setShowForm(false);
       await refresh();
-    } catch (err) { setError(err instanceof Error ? err.message : "Could not add expense"); }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not add expense");
+    } finally {
+      setSaving(false);
+    }
   }
 
   const total = report.reduce((sum, item) => sum + item.total, 0);
@@ -63,42 +81,148 @@ export default function ExpensesPage() {
 
   return (
     <div className="page-stack">
-      <PageHeader eyebrow="Treasury" title="Expenses" description="Every rupee, clearly accounted for."
-        action={canEdit && <button className="icon-button" onClick={() => setShowForm((value) => !value)}><Plus size={20} /></button>} />
+      <PageHeader
+        eyebrow="Treasury"
+        title="Expenses"
+        description="Every rupee, clearly accounted for — with bills and payment proof."
+        action={canEdit && <button className="icon-button" onClick={() => setShowForm((value) => !value)}><Plus size={20} /></button>}
+      />
       {error && <p className="error">{error}</p>}
       <section className="report-hero">
         <span className="eyebrow">Total spent</span>
-        <div className="report-balance"><strong>{inr(total)}</strong><span>{rows.length} recorded transactions</span></div>
+        <div className="report-balance">
+          <strong>{inr(total)}</strong>
+          <span>{rows.length} recorded transactions</span>
+        </div>
       </section>
       {canEdit && showForm && (
         <form className="form-card page-enter" onSubmit={onSubmit}>
           <h3>Add expense</h3>
-          <FormField label="Category"><select name="category" defaultValue="decoration">{categories.map((category) => <option key={category} value={category}>{pretty(category)}</option>)}</select></FormField>
-          <FormField label="Description"><input name="description" placeholder="Lights and decoration" required /></FormField>
+          <FormField label="Category">
+            <select name="category" defaultValue="decoration">
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {pretty(category)}
+                </option>
+              ))}
+            </select>
+          </FormField>
+          <FormField label="Description">
+            <input name="description" placeholder="Lights and decoration" required />
+          </FormField>
           <div className="grid-2">
-            <FormField label="Amount"><input name="amount" type="number" placeholder="8,500" required /></FormField>
-            <FormField label="Payment"><select name="method"><option value="upi">UPI</option><option value="cash">Cash</option></select></FormField>
+            <FormField label="Amount">
+              <input name="amount" type="number" placeholder="8,500" required />
+            </FormField>
+            <FormField label="Payment">
+              <select name="method">
+                <option value="upi">UPI</option>
+                <option value="cash">Cash</option>
+              </select>
+            </FormField>
           </div>
-          <FormField label="Paid to"><input name="paid_to" placeholder="Vendor name" required /></FormField>
-          <FormField label="Expense date"><input name="date" type="date" required /></FormField>
-          <div className="form-actions"><button type="button" className="button-secondary" onClick={() => setShowForm(false)}>Cancel</button><button type="submit"><Plus size={18} /> Add expense</button></div>
+          <FormField label="Paid to">
+            <input name="paid_to" placeholder="Vendor name" required />
+          </FormField>
+          <FormField label="Expense date">
+            <input name="date" type="date" required />
+          </FormField>
+          <div className="grid-2">
+            <FormField label="Bill photo" hint="JPG, PNG or PDF">
+              <input name="bill" type="file" accept="image/*,.pdf" />
+            </FormField>
+            <FormField label="Payment screenshot" hint="UPI / cash proof">
+              <input name="screenshot" type="file" accept="image/*,.pdf" />
+            </FormField>
+          </div>
+          <div className="form-actions">
+            <button type="button" className="button-secondary" onClick={() => setShowForm(false)}>
+              Cancel
+            </button>
+            <button type="submit" disabled={saving}>
+              <Plus size={18} /> {saving ? "Saving…" : "Add expense"}
+            </button>
+          </div>
         </form>
       )}
       <SectionHeader title="Category overview" subtitle="Where the festival budget is going" />
-      {loading ? <SkeletonCards count={2} /> : <section className="category-grid">
-        {report.map((item) => (
-          <article className="category-card" key={item.category}><span>{pretty(item.category)}</span><strong>{inr(item.total)}</strong><div className="bar-track"><i style={{ width: `${(item.total / max) * 100}%` }} /></div></article>
-        ))}
-      </section>}
+      {loading ? (
+        <SkeletonCards count={2} />
+      ) : (
+        <section className="category-grid">
+          {report.map((item) => (
+            <article className="category-card" key={item.category}>
+              <span>{pretty(item.category)}</span>
+              <strong>{inr(item.total)}</strong>
+              <div className="bar-track">
+                <i style={{ width: `${(item.total / max) * 100}%` }} />
+              </div>
+            </article>
+          ))}
+        </section>
+      )}
       <SectionHeader title="Recent expenses" subtitle="Latest recorded payments" />
-      {loading ? <SkeletonCards /> : rows.length ? rows.map((row) => (
-        <article className="list-card" key={row.id}>
-          <span className="activity-icon"><ReceiptText size={20} /></span>
-          <div className="list-card-main"><h3>{row.description}</h3><p><Store size={12} /> {row.paid_to} · {row.expense_date}</p><span className="status-badge"><WalletCards size={11} /> {row.payment_method}</span></div>
-          <div className="list-value"><strong>{inr(row.amount)}</strong><p>{pretty(row.category)}</p></div>
-        </article>
-      )) : <EmptyState icon={IndianRupee} title="No expenses recorded" description="Add your first festival expense to start the financial report." />}
-      {canEdit && !showForm && <div className="fab"><button onClick={() => setShowForm(true)}><Plus size={18} /> Add Expense</button></div>}
+      {loading ? (
+        <SkeletonCards />
+      ) : rows.length ? (
+        rows.map((row) => (
+          <article className="list-card" key={row.id}>
+            <span className="activity-icon">
+              <ReceiptText size={20} />
+            </span>
+            <div className="list-card-main">
+              <h3>{row.description}</h3>
+              <p>
+                <Store size={12} /> {row.paid_to} · {row.expense_date}
+              </p>
+              <div className="row">
+                <span className="status-badge">
+                  <WalletCards size={11} /> {row.payment_method}
+                </span>
+                {row.bill_url && (
+                  <button type="button" className="status-badge" onClick={() => setPreview(row.bill_url!)}>
+                    <FileImage size={11} /> Bill
+                  </button>
+                )}
+                {row.payment_screenshot_url && (
+                  <button type="button" className="status-badge" onClick={() => setPreview(row.payment_screenshot_url!)}>
+                    <Camera size={11} /> Screenshot
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="list-value">
+              <strong>{inr(row.amount)}</strong>
+              <p>{pretty(row.category)}</p>
+            </div>
+          </article>
+        ))
+      ) : (
+        <EmptyState icon={IndianRupee} title="No expenses recorded" description="Add your first festival expense to start the financial report." />
+      )}
+      {canEdit && !showForm && (
+        <div className="fab">
+          <button onClick={() => setShowForm(true)}>
+            <Plus size={18} /> Add Expense
+          </button>
+        </div>
+      )}
+      {preview && (
+        <div className="preview-overlay" onClick={() => setPreview(null)} role="dialog" aria-label="Attachment preview">
+          <div className="preview-card" onClick={(event) => event.stopPropagation()}>
+            {preview.toLowerCase().endsWith(".pdf") ? (
+              <a href={preview} target="_blank" rel="noreferrer">
+                Open PDF
+              </a>
+            ) : (
+              <img src={preview} alt="Expense attachment" />
+            )}
+            <button type="button" className="button-secondary" onClick={() => setPreview(null)}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
