@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { Camera, FileImage, IndianRupee, Plus, ReceiptText, Store, WalletCards } from "lucide-react";
-import { api, inr, type Expense } from "../api";
+import { api, inr, mediaUrl, type Expense } from "../api";
 import { useAuth } from "../AuthContext";
 import { EmptyState, FormField, PageHeader, SectionHeader, SkeletonCards } from "../components/ui";
 
@@ -180,12 +180,12 @@ export default function ExpensesPage() {
                   <WalletCards size={11} /> {row.payment_method}
                 </span>
                 {row.bill_url && (
-                  <button type="button" className="status-badge" onClick={() => setPreview(row.bill_url!)}>
+                  <button type="button" className="status-badge" onClick={() => setPreview(mediaUrl(row.bill_url))}>
                     <FileImage size={11} /> Bill
                   </button>
                 )}
                 {row.payment_screenshot_url && (
-                  <button type="button" className="status-badge" onClick={() => setPreview(row.payment_screenshot_url!)}>
+                  <button type="button" className="status-badge" onClick={() => setPreview(mediaUrl(row.payment_screenshot_url))}>
                     <Camera size={11} /> Screenshot
                   </button>
                 )}

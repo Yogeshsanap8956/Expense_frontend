@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Download, FileText, HandCoins, ReceiptText, TrendingUp } from "lucide-react";
-import { api, getToken, inr, type FinalReport } from "../api";
+import { api, apiUrl, getToken, inr, type FinalReport } from "../api";
 import { AnimatedNumber, PageHeader, ProgressRing, SkeletonCards, StatCard } from "../components/ui";
 
 export default function ReportPage() {
@@ -37,7 +37,7 @@ export default function ReportPage() {
       <button
         type="button"
         onClick={async () => {
-          const res = await fetch("/api/v1/reports/final.pdf", {
+          const res = await fetch(apiUrl("/api/v1/reports/final.pdf"), {
             headers: { Authorization: `Bearer ${getToken()}` },
           });
           const blob = await res.blob();

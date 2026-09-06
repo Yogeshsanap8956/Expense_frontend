@@ -1,5 +1,18 @@
 const TOKEN_KEY = "mandal_token";
 
+/** Empty in local Vite (proxy). Set VITE_API_BASE in Cloudflare Pages, e.g. https://api.example.com */
+export const API_BASE = (import.meta.env.VITE_API_BASE || "").replace(/\/$/, "");
+
+export function apiUrl(path: string) {
+  return `${API_BASE}${path}`;
+}
+
+export function mediaUrl(path?: string | null) {
+  if (!path) return "";
+  if (/^https?:\/\//i.test(path)) return path;
+  return `${API_BASE}${path}`;
+}
+
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -19,7 +32,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (token) headers.set("Authorization", `Bearer ${token}`);
   let res: Response;
   try {
-    res = await fetch(path, { ...options, headers });
+    res = await fetch(apiUrl(path), { ...options, headers });
   } catch {
     throw new Error("Cannot reach the server. Make sure backend is running on port 8000.");
   }
@@ -64,7 +77,7 @@ export const api = {
     const token = getToken();
     const form = new FormData();
     form.append("file", file);
-    const res = await fetch("/api/v1/uploads/", {
+    const res = await fetch(apiUrl("/api/v1/uploads/"), {
       method: "POST",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: form,
