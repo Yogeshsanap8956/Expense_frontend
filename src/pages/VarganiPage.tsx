@@ -67,20 +67,30 @@ export default function VarganiPage() {
 
   return (
     <div className="page-stack">
-      <PageHeader eyebrow="Collections" title="Vargani" description="Track every contribution with complete transparency."
-        action={canEdit && <button className="icon-button" onClick={() => setShowForm((value) => !value)} aria-label="Add member"><Plus size={20} /></button>} />
+      <PageHeader
+        eyebrow="Collections"
+        title={canEdit ? "Vargani" : "My Vargani"}
+        description={canEdit ? "Track every contribution with complete transparency." : "Your house contribution for Ganpati Mahotsav 2026."}
+        action={canEdit && <button className="icon-button" onClick={() => setShowForm((value) => !value)} aria-label="Add member"><Plus size={20} /></button>}
+      />
       {error && <p className="error">{error}</p>}
       {loading ? <SkeletonCards count={3} /> : (
         <section className="progress-card">
-          <div><span className="eyebrow">Total collection</span><h3>{inr(totals.paid)} <small>/ {inr(totals.expected)}</small></h3><p>{rows.length} houses in this year's collection</p></div>
-          <ProgressRing value={percentage} label="collected" size={102} />
+          <div>
+            <span className="eyebrow">{canEdit ? "Total collection" : "Amount paid"}</span>
+            <h3>{inr(totals.paid)} <small>/ {inr(totals.expected)}</small></h3>
+            <p>{canEdit ? `${rows.length} houses in this year's collection` : rows[0] ? `${rows[0].house_number || "Your house"} · ${rows[0].status}` : "No record yet"}</p>
+          </div>
+          <ProgressRing value={percentage} label={canEdit ? "collected" : "paid"} size={102} />
         </section>
       )}
-      <section className="metrics-grid">
-        <article className="metric-card tone-saffron"><span className="metric-label">Paid</span><strong>{counts.paid}</strong><small>Completed payments</small></article>
-        <article className="metric-card tone-red"><span className="metric-label">Pending</span><strong>{counts.pending}</strong><small>Awaiting collection</small></article>
-        <article className="metric-card tone-gold"><span className="metric-label">Partial</span><strong>{counts.partial}</strong><small>Partly received</small></article>
-      </section>
+      {canEdit && (
+        <section className="metrics-grid">
+          <article className="metric-card tone-saffron"><span className="metric-label">Paid</span><strong>{counts.paid}</strong><small>Completed payments</small></article>
+          <article className="metric-card tone-red"><span className="metric-label">Pending</span><strong>{counts.pending}</strong><small>Awaiting collection</small></article>
+          <article className="metric-card tone-gold"><span className="metric-label">Partial</span><strong>{counts.partial}</strong><small>Partly received</small></article>
+        </section>
+      )}
       {canEdit && showForm && (
         <form className="form-card page-enter" onSubmit={addMember}>
           <h3><UserPlus size={18} /> Add house / member</h3>
@@ -93,7 +103,7 @@ export default function VarganiPage() {
           <div className="form-actions"><button type="button" className="button-secondary" onClick={() => setShowForm(false)}>Cancel</button><button type="submit"><Plus size={18} /> Add member</button></div>
         </form>
       )}
-      <div className="form-field"><div className="list-card"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search house or member" aria-label="Search members" /></div></div>
+      {canEdit && <div className="form-field"><div className="list-card"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search house or member" aria-label="Search members" /></div></div>}
       {loading ? <SkeletonCards /> : filtered.length ? filtered.map((row) => (
         <article className="list-card" key={row.id}>
           <MemberAvatar name={row.member_name} />

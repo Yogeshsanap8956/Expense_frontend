@@ -81,7 +81,13 @@ export const api = {
   announcements: () => request<Announcement[]>("/api/v1/announcements"),
   createAnnouncement: (body: { title: string; body: string }) =>
     request<Announcement>("/api/v1/announcements", { method: "POST", body: JSON.stringify(body) }),
+  shareAnnouncement: (id: number) =>
+    request<{ whatsapp_url: string; message: string }>(`/api/v1/announcements/${id}/share`),
   events: () => request<FestivalEvent[]>("/api/v1/events"),
+  createEvent: (body: Partial<FestivalEvent>) =>
+    request<FestivalEvent>("/api/v1/events", { method: "POST", body: JSON.stringify(body) }),
+  updateEvent: (id: number, body: Partial<FestivalEvent>) =>
+    request<FestivalEvent>(`/api/v1/events/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   aarti: () => request<AartiSlot[]>("/api/v1/aarti"),
   setAartiAvailability: (slot_id: number, available: boolean) =>
     request<AartiSlot>("/api/v1/aarti/availability", {
@@ -170,7 +176,11 @@ export type FestivalEvent = {
   id: number;
   title: string;
   event_date: string;
+  event_time?: string | null;
   location?: string | null;
+  responsible_person?: string | null;
+  volunteers?: string | null;
+  budget?: number | null;
   status: string;
 };
 
