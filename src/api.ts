@@ -56,6 +56,18 @@ export const api = {
     request<Announcement>("/api/v1/announcements", { method: "POST", body: JSON.stringify(body) }),
   events: () => request<FestivalEvent[]>("/api/v1/events"),
   aarti: () => request<AartiSlot[]>("/api/v1/aarti"),
+  setAartiAvailability: (slot_id: number, available: boolean) =>
+    request<AartiSlot>("/api/v1/aarti/availability", {
+      method: "POST",
+      body: JSON.stringify({ slot_id, available }),
+    }),
+  assignAarti: (slotId: number, member_ids: number[]) =>
+    request<AartiSlot>(`/api/v1/aarti/${slotId}/assign`, {
+      method: "POST",
+      body: JSON.stringify({ member_ids }),
+    }),
+  createAartiDay: (body: { slot_date: string; morning_time?: string; evening_time?: string }) =>
+    request<AartiSlot[]>("/api/v1/aarti/days", { method: "POST", body: JSON.stringify(body) }),
   mahaprasad: () => request<Mahaprasad[]>("/api/v1/mahaprasad"),
   inventory: () => request<InventoryItem[]>("/api/v1/inventory"),
   finalReport: () => request<FinalReport>("/api/v1/reports/final"),
@@ -132,6 +144,8 @@ export type AartiSlot = {
   session: string;
   start_time: string;
   members: { id: number; name: string }[];
+  availability: { member_id: number; name: string; available: boolean }[];
+  my_availability: boolean | null;
 };
 
 export type Mahaprasad = {
