@@ -1,9 +1,23 @@
-# Deploy frontend (Cloudflare Pages)
+# Deploy frontend (Cloudflare)
 
-1. Push this repo (or connect GitHub in Cloudflare).
-2. Cloudflare Dashboard → Workers & Pages → Create → Pages → Connect GitHub `Expense_frontend`.
-3. Build: `npm run build` · Output: `dist` · Node 20+.
-4. Production env var: `VITE_API_BASE` = your Oracle API URL (HTTPS, no trailing slash), e.g. `https://api.yourdomain.com`.
-5. Redeploy after setting `VITE_API_BASE` (it is baked in at build time).
+This repo deploys as a **Worker with static assets** (`wrangler.toml` → `[assets] directory = "./dist"`).
+The Worker name in `wrangler.toml` must match the project name in the Cloudflare dashboard.
 
-Install on phones: open the Pages URL on HTTPS → browser menu → Add to Home Screen.
+## Build settings
+
+- Build command: `npm run build`
+- Deploy command: `npx wrangler deploy`
+- Variable: `NODE_VERSION` = `20`
+
+## Production API URL
+
+`VITE_API_BASE` is compiled into the bundle at build time.
+
+1. Project → Settings → Variables → add `VITE_API_BASE` = your API origin
+   (HTTPS, no trailing slash), e.g. `https://api.yourdomain.com`.
+2. Retry the deployment. Saving the variable alone changes nothing.
+3. Add the deployed URL to the backend `CORS_ORIGINS`.
+
+Leave `VITE_API_BASE` empty until the backend is hosted; the app builds fine, only login fails.
+
+Install on phones: open the HTTPS URL → browser menu → Add to Home Screen.
