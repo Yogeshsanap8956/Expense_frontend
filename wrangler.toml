@@ -1,5 +1,5 @@
 # Must match the Worker name in the Cloudflare dashboard.
-name = "ganpati-mandal"
+name = "expense-frontend"
 compatibility_date = "2026-09-01"
 
 # Vite output served as static assets; unknown routes fall back to the SPA.
